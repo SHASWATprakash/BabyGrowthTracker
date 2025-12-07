@@ -3,47 +3,47 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AppContext } from './AppContext';
 import { BabyProfile, GrowthMeasurement, AppDataSchema } from '../types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const STORAGE_KEY = 'baby-growth-tracker:v1';
+import {
+  loadFromStorage,
+  saveToStorage,
+} from '../storage/storage';
+import { CURRENT_SCHEMA_VERSION } from '../storage/migrations';
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [babyProfile, setBabyProfile] = useState<BabyProfile | null>(null);
   const [measurements, setMeasurements] = useState<GrowthMeasurement[]>([]);
+  const [storageCorrupted, setStorageCorrupted] = useState(false);
 
   /**
-   * Load data from storage
+   * Load persisted data
    */
   const loadAppData = useCallback(async () => {
-    try {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const result = await loadFromStorage();
 
-      if (!raw) return;
-
-      const parsed: AppDataSchema = JSON.parse(raw);
-
-      setBabyProfile(parsed.babyProfile);
-      setMeasurements(parsed.measurements);
-    } catch (err) {
-      console.log('Error loading data:', err);
+    if (!result.ok) {
+      console.log('❌ Storage corrupted');
+      setStorageCorrupted(true);
+      return;
     }
+
+    const { data } = result;
+
+    setBabyProfile(data.babyProfile);
+    setMeasurements(data.measurements);
   }, []);
 
   /**
-   * Save to storage
+   * Save entire schema atomically
    */
-  const saveData = useCallback(
+  const persist = useCallback(
     async (profile: BabyProfile | null, list: GrowthMeasurement[]) => {
-      const data: AppDataSchema = {
-        schemaVersion: 1,
+      const schema: AppDataSchema = {
+        schemaVersion: CURRENT_SCHEMA_VERSION,
         babyProfile: profile,
         measurements: list,
       };
-      try {
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      } catch (err) {
-        console.log('Error saving data:', err);
-      }
+
+      await saveToStorage(schema);
     },
     [],
   );
@@ -51,46 +51,58 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   /**
    * Add measurement
    */
-  const addMeasurement = (m: GrowthMeasurement) => {
-    setMeasurements(prev => {
-      const updated = [...prev, m];
-      saveData(babyProfile, updated);
-      return updated;
-    });
-  };
+  const addMeasurement = useCallback(
+    (m: GrowthMeasurement) => {
+      setMeasurements(prev => {
+        const updated = [...prev, m];
+        persist(babyProfile, updated);
+        return updated;
+      });
+    },
+    [babyProfile, persist],
+  );
 
   /**
    * Update measurement
    */
-  const updateMeasurement = (m: GrowthMeasurement) => {
-    setMeasurements(prev => {
-      const updated = prev.map(item => (item.id === m.id ? m : item));
-      saveData(babyProfile, updated);
-      return updated;
-    });
-  };
+  const updateMeasurement = useCallback(
+    (m: GrowthMeasurement) => {
+      setMeasurements(prev => {
+        const updated = prev.map(item => (item.id === m.id ? m : item));
+        persist(babyProfile, updated);
+        return updated;
+      });
+    },
+    [babyProfile, persist],
+  );
 
   /**
    * Delete measurement
    */
-  const deleteMeasurement = (id: string) => {
-    setMeasurements(prev => {
-      const updated = prev.filter(item => item.id !== id);
-      saveData(babyProfile, updated);
-      return updated;
-    });
-  };
+  const deleteMeasurement = useCallback(
+    (id: string) => {
+      setMeasurements(prev => {
+        const updated = prev.filter(item => item.id !== id);
+        persist(babyProfile, updated);
+        return updated;
+      });
+    },
+    [babyProfile, persist],
+  );
 
   /**
-   * Save profile change
+   * Update baby profile
    */
-  const updateProfile = (profile: BabyProfile) => {
-    setBabyProfile(profile);
-    saveData(profile, measurements);
-  };
+  const updateProfile = useCallback(
+    (profile: BabyProfile) => {
+      setBabyProfile(profile);
+      persist(profile, measurements);
+    },
+    [measurements, persist],
+  );
 
   /**
-   * Load on mount
+   * Load once on mount
    */
   useEffect(() => {
     loadAppData();
@@ -107,6 +119,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         addMeasurement,
         updateMeasurement,
         deleteMeasurement,
+
+        // Optional flag for UI:
+  
       }}
     >
       {children}
