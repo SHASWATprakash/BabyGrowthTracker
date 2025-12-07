@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Button,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -75,7 +76,7 @@ export default function MeasurementForm() {
 
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     if (!babyProfile) {
-      alert('Baby profile not set');
+      Alert.alert('Baby profile not set', 'Please create a baby profile first.');
       return;
     }
 
@@ -106,7 +107,7 @@ export default function MeasurementForm() {
     };
 
     addMeasurement(measurement);
-    alert('Measurement added!');
+    Alert.alert('Saved', 'Measurement added!');
   };
 
   return (
@@ -119,7 +120,12 @@ export default function MeasurementForm() {
         name="date"
         control={control}
         render={({ field }) => (
-          <TextInput {...field} style={styles.input} placeholder="2024-01-01" />
+          <TextInput
+            value={field.value}
+            onChangeText={field.onChange}
+            style={styles.input}
+            placeholder="2024-01-01"
+          />
         )}
       />
       {errors.date && <Text style={styles.error}>{errors.date.message}</Text>}
@@ -240,7 +246,3 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 });
-function alert(arg0: string) {
-    throw new Error('Function not implemented.');
-}
-
