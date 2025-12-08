@@ -52,6 +52,10 @@ export function stdNormalCDF(z: number): number {
  * LMS → Z-score
  */
 export function lmsToZ(value: number, L: number, M: number, S: number): number {
+  // guarded: avoid invalid operations
+  if (!isFinite(value) || value <= 0 || !isFinite(M) || M <= 0 || !isFinite(S)) {
+    return NaN;
+  }
   if (L === 0) {
     return Math.log(value / M) / S;
   }
@@ -62,6 +66,7 @@ export function lmsToZ(value: number, L: number, M: number, S: number): number {
  * Z → Percentile
  */
 export function zToPercentile(z: number): number {
+  if (!isFinite(z)) return NaN;
   return stdNormalCDF(z) * 100;
 }
 
@@ -85,11 +90,16 @@ export function interpolateLmsForAge(
   }
 
   // clamp to range
-  if (ageDays <= table[0].ageDays) return table[0];
+  if (ageDays <= table[0].ageDays) {
+    const t = table[0];
+    return { L: t.L, M: t.M, S: t.S };
+  }
   const last = table[table.length - 1];
-  if (ageDays >= last.ageDays) return last;
+  if (ageDays >= last.ageDays) {
+    return { L: last.L, M: last.M, S: last.S };
+  }
 
-  // find bounding interval
+  // find bounding interval (first index such that next.ageDays >= ageDays)
   let i = 0;
   while (i < table.length - 1 && table[i + 1].ageDays < ageDays) {
     i++;
@@ -106,7 +116,7 @@ export function interpolateLmsForAge(
 }
 
 /**
- * Main API: compute percentile from value + age in days + sex + LMS table
+ * Main API: compute z and percentile from value + age in days + sex + LMS table
  */
 export function percentileFor(
   value: number,
@@ -120,3 +130,32 @@ export function percentileFor(
   const percentile = zToPercentile(z);
   return { z, percentile };
 }
+
+/**
+ * Convenience wrapper: returns percentile number (0-100) or null if computation invalid.
+ * Named `valueToPercentile` because other utils expect that API.
+ */
+export function valueToPercentile(
+  table: LmsTable,
+  sex: Sex,
+  ageDays: number,
+  value: number,
+): number | null {
+  try {
+    const { percentile } = percentileFor(value, ageDays, sex, table);
+    if (!Number.isFinite(percentile) || Number.isNaN(percentile)) return null;
+    return percentile;
+  } catch (e) {
+    return null;
+  }
+}
+
+export default {
+  Erf,
+  stdNormalCDF,
+  lmsToZ,
+  zToPercentile,
+  interpolateLmsForAge,
+  percentileFor,
+  valueToPercentile,
+};

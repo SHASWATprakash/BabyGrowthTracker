@@ -1,97 +1,177 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Baby Growth Tracker App
 
-# Getting Started
+A React Native (TypeScript) application for tracking infant growth, storing measurements locally, computing WHO percentiles, and visualizing progress using interactive charts.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+This app was built as part of a take-home assignment and focuses heavily on clean architecture, maintainable code, modular utilities, and real-world features found in pediatric growth apps.
 
-## Step 1: Start Metro
+# 🚀 Features
+✔ Baby Profile
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+Name, birth date, gender
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+Auto-seed sample measurements for easier chart preview
 
-```sh
-# Using npm
-npm start
+✔ Record Measurements
 
-# OR using Yarn
-yarn start
-```
+Weight (kg/lb)
 
-## Step 2: Build and run your app
+Height/Length (cm/in)
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+Head circumference (cm/in)
 
-### Android
+Auto-calculate age in days
 
-```sh
-# Using npm
+Auto-calculate WHO percentiles using LMS (Z-score)
+
+Edit & delete measurement entries
+
+✔ Visual Growth Charts
+
+Weight-for-Age
+
+Height-for-Age
+
+Head-Circumference-for-Age
+
+Smooth line plots + child’s own data points
+
+✔ Local Storage (AsyncStorage)
+
+Schema-versioned JSON storage
+
+Migration-friendly persistence layer
+
+✔ Clean Architecture
+
+Context-based global store
+
+WHO LMS calculation utilities
+
+Strong TypeScript definitions
+
+Separated presentation + logic
+
+🛠 Tech Stack
+Layer	Library
+UI	React Native + TypeScript
+Forms	react-hook-form + Yup
+Navigation	@react-navigation/native + native-stack
+State	React Context
+Storage	@react-native-async-storage/async-storage
+Charts	react-native-chart-kit
+Date utils	dayjs
+WHO LMS Percentiles	Custom LMS interpolation utilities
+Testing	Jest + @testing-library/react-native
+Lint / Format	ESLint + Prettier
+
+ 
+# Installation & Running the App
+1️⃣ Clone the repository
+git clone https://github.com/SHASWATprakash/BabyGrowthTracker.git
+cd BabyGrowthTracker
+
+Using yarn:
+
+yarn install
+
+
+Using npm:
+
+npm install
+
+iOS (macOS)
+
+Install CocoaPods and pods:
+
+# yarn
+cd ios && pod install --repo-update && cd ..
+
+# npm
+cd ios && pod install --repo-update && cd ..
+
+
+Run app:
+
+Using yarn:
+
+yarn start                # start metro
+yarn ios                  # run iOS simulator
+yarn android              # run Android emulator/device
+
+
+Using npm:
+
+npm run start
+npm run ios
 npm run android
 
-# OR using Yarn
-yarn android
-```
+package.json — required scripts
 
-### iOS
+Include these scripts in package.json. I show both yarn and npm usages above (scripts are identical; run via yarn <script> or npm run <script>).
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+{
+  "scripts": {
+    "start": "react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "test": "jest",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "clean": "watchman watch-del-all && rm -rf node_modules && rm -rf /tmp/metro-* && rm -rf ios/Pods && rm -rf android/.gradle",
+    "pod-install": "cd ios && pod install --repo-update && cd .."
+  }
+}
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
 
-```sh
-bundle install
-```
+Use yarn ios / yarn android or npm run ios / npm run android.
 
-Then, and every time you update your native dependencies, run:
+Setup checklist (what to do after cloning)
 
-```sh
-bundle exec pod install
-```
+yarn install (or npm install)
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Add WHO JSONs: place who-weight-age.json, who-length-age.json, who-head-age.json into src/data/ (the tools folder includes a converter; you can also upload official WHO XLSX and run node tools/convert-who-to-json.js ...).
 
-```sh
-# Using npm
-npm run ios
+For iOS: cd ios && pod install --repo-update && cd ..
 
-# OR using Yarn
-yarn ios
-```
+yarn start --reset-cache then yarn ios or yarn android.
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+App Architecture (short)
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+State: React Context (AppProvider) for babyProfile + measurements. Exposes add/update/delete + persistence helpers.
 
-## Step 3: Modify your app
+Persistence: @react-native-async-storage/async-storage with a single schema version key (baby-growth-tracker:v1). Migration hooks prepared for future schema changes.
 
-Now that you have successfully run the app, let's make changes!
+Forms: react-hook-form + @hookform/resolvers/yup + Yup for validation. Forms use typed resolver generics for full TypeScript safety.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+Percentiles: LMS interpolation + lmsToZ → zToPercentile. Utilities live in src/utils/lms.ts and src/utils/percentiles.ts.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+Charts: react-native-chart-kit (line + scatter) rendered in src/components/charts/*.
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+Navigation: @react-navigation/native + @react-navigation/native-stack — stack: Profile | AddMeasurement | History | Charts | EditMeasurement.
 
-## Congratulations! :tada:
+# Why React-Native-Chart-Kit
+Originally, Victory was planned for charts.
+However, React Native 0.82.x + Victory Native introduced major problems:
 
-You've successfully run and modified your React Native App. :partying_face:
+❌ Fatal Issues with Victory Native
 
-### Now what?
+Hard dependency on @shopify/react-native-skia — RN 0.82 does not support these versions.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+Hard dependency on react-native-reanimated — mismatched versions causing pod crashes.
 
-# Troubleshooting
+SVG path parsing errors (NaN issues).
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+iOS build failures due to incompatible Reanimated + Worklets versions.
 
-# Learn More
+Victory removed support for older RN architectures.
 
-To learn more about React Native, take a look at the following resources:
+✔ Final Decision: Use react-native-chart-kit
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+react-native-chart-kit works out-of-the-box, requires only react-native-svg, and is extremely stable.
+
+Library	Why Not Used?	Why Used?
+Victory	❌ RN 0.82 incompatible, pod failures, Skia + Reanimated conflicts	—
+react-native-chart-kit	—	✔ Simple ✔ Stable ✔ Zero native issues ✔ Great for line + scatter charts
+
+Conclusion:
+For reliability and successful assignment delivery, react-native-chart-kit is the correct choice.

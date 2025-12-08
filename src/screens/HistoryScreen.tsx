@@ -4,10 +4,12 @@ import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import HistoryItem from '../components/history/HistoryItem';
 import { useAppContext } from '../store';
+import { useNavigation } from '@react-navigation/native';
+
 
 export default function HistoryScreen() {
   const { measurements, deleteMeasurement } = useAppContext();
-
+const navigation = useNavigation<any>();
   // Sort by date descending
   const sorted = [...measurements].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -27,7 +29,7 @@ export default function HistoryScreen() {
             <HistoryItem
               item={item}
               onDelete={(id) => deleteMeasurement(id)}
-              onEdit={() => {}}
+              onEdit={(it) => navigation.navigate('EditMeasurement', { measurementId: it.id })}
             />
           )}
           contentContainerStyle={{ paddingBottom: 40 }}
